@@ -157,7 +157,7 @@
   </div>
 
   <div id="legend">
-    <div class="legend-row"><div class="swatch" style="background:#FF7A45"></div><div class="legend-label">Inflatable Cup</div></div>
+    <div class="legend-row"><div class="swatch" style="background:#0A1830"></div><div class="legend-label">Solar Collector Cup (Fixed)</div></div>
     <div class="legend-row"><div class="swatch" style="background:#4A90C4;opacity:0.7"></div><div class="legend-label">Underground Tank</div></div>
     <div class="legend-row"><div class="swatch" style="background:#68A0C8"></div><div class="legend-label">Purification Stages</div></div>
     <div class="legend-row"><div class="swatch" style="background:#3A7ABF"></div><div class="legend-label">Plumbing / Pipes</div></div>
@@ -289,7 +289,7 @@ scene.add(root);
 // ── GROUND ────────────────────────────────────────────────────────
 // Grass surface (two sections, leaving the cutaway gap)
 const grassF = mesh(box(8,0.12,3), M.grass, 0,0,2.5);
-tag(grassF, 'Ground Surface', 'Mowed grass above the installation. Zero permanent footprint when unit is retracted.');
+tag(grassF, 'Ground Surface', 'Mowed grass around the installation. Only the slim fixed column and cup occupy surface space — no retracting shaft, no hydraulic housing underfoot.');
 root.add(grassF);
 const grassL = mesh(box(1.5,0.12,4), M.grass, -3.25,0,0.5);
 root.add(grassL);
@@ -311,65 +311,65 @@ const gravel = mesh(box(4.5,0.18,3.5), M.gravel, 0,-2.95,0);
 tag(gravel, 'Gravel Drainage Layer', 'Crushed stone bed prevents waterlogging around the buried tank and improves seepage.');
 root.add(gravel);
 
-// Ground-level concrete collar around the shaft
+// Ground-level concrete base plate around the fixed support column
 const collar = mesh(cyl(0.35,0.35,0.08), M.steel2, 0,0.04,0);
-tag(collar, 'Flush Surface Cover', 'Load-rated concrete collar (handles foot + light vehicle traffic). Sits level with ground when retracted.');
+tag(collar, 'Base Plate / Column Mount', 'Load-rated concrete base plate (handles foot + light vehicle traffic). Anchors the fixed support column — no shaft, no moving parts to seal.');
 root.add(collar);
 
-// ── TELESCOPING MECHANISM ─────────────────────────────────────────
-// Outer casing (static, flush with ground)
-const outer = mesh(cyl(0.25,0.25,3.0), M.steel2, 0,-1.56,0);
-tag(outer, 'Outer Casing (Ground-Mounted)', 'Stainless-steel housing fixed in the concrete collar. Guides the telescoping stages and carries plumbing.');
-root.add(outer);
+// ── FIXED SUPPORT COLUMN (replaces the telescoping/hydraulic mechanism) ──
+const CUP_Y = 1.55;             // fixed cup height — nothing extends or retracts
+const CUP_R = 1.55;             // fixed catchment radius
 
-// Stage 2 – mid telescope (slightly risen)
-const stage2 = mesh(cyl(0.19,0.19,2.2), M.steel, 0,-0.6,0);
-tag(stage2, 'Telescoping Stage 2', 'Second stage extends when rain is detected, pushing the cup to collection height.');
-root.add(stage2);
+const support = mesh(cyl(0.10,0.13,CUP_Y+0.05), M.steel2, 0, (CUP_Y+0.05)/2, 0);
+tag(support, 'Fixed Support Column', 'Single rigid stainless column — no hydraulic actuator, no telescoping stages, nothing to extend or retract. Carries the collection pipe down its hollow centre to the underground tank.');
+root.add(support);
 
-// Stage 3 – inner rod (extends furthest, holds cup)
-const stage3 = mesh(cyl(0.13,0.13,1.4), M.steel, 0,0.7,0);
-tag(stage3, 'Telescoping Stage 3 (Inner Rod)', 'Hollow stainless rod — carries collected water downward through the centre while extending the cup upward.');
-root.add(stage3);
-
-// ── INFLATABLE CUP ────────────────────────────────────────────────
-// Wide funnel/bowl profile — maximises catchment area for the collection cup.
-const CUP_Y = 1.55;
-const CUP_MAX_R = 1.55;   // fully inflated opening radius (wide catchment)
-const CUP_MIN_R = 0.55;   // collapsed / resting radius
+// ── FIXED SOLAR-PANEL COLLECTOR CUP ─────────────────────────────────
+// No bladder, no compressor, no moving parts: a rigid bowl whose outer
+// surface is itself the photovoltaic panel. It is always deployed, so it
+// catches rain whenever it rains AND generates electricity from sunlight
+// the rest of the year — useful through the dry summer months too, not
+// only the ~2-month monsoon window.
 function cupProfile(r) {
-  // r scales the outer lip radius; inner points scale proportionally
-  const k = r / CUP_MAX_R;
   return [
     new THREE.Vector2(0.13, 0),
-    new THREE.Vector2(0.15 + 0.04*k, 0.08),
-    new THREE.Vector2(0.20 + 0.30*k, 0.20),
-    new THREE.Vector2(0.28 + 0.75*k, 0.36),
-    new THREE.Vector2(0.34 + 1.15*k, 0.52),
+    new THREE.Vector2(0.19, 0.08),
+    new THREE.Vector2(0.50, 0.20),
+    new THREE.Vector2(1.03, 0.36),
+    new THREE.Vector2(1.49, 0.52),
     new THREE.Vector2(r, 0.66),
   ];
 }
-const cupGeo = new THREE.LatheGeometry(cupProfile(CUP_MIN_R), 48);
-const cup = new THREE.Mesh(cupGeo, M.cup);
+const cupGeo = new THREE.LatheGeometry(cupProfile(CUP_R), 48);
+const cupMat = new THREE.MeshStandardMaterial({ color: 0x0A1830, metalness: 0.55, roughness: 0.22, emissive: 0x081422, emissiveIntensity: 0.15, side: THREE.DoubleSide });
+const cup = new THREE.Mesh(cupGeo, cupMat);
 cup.position.set(0, CUP_Y, 0);
-tag(cup, 'Inflatable Collection Cup', 'Food-grade TPU/silicone membrane. Inflates from ~1.1m to a wide 3.1m-diameter catchment dome in seconds via micro-compressor, maximising rainfall capture. Collapse ratio ~8:1. UV & weather resistant.');
+cup.castShadow = true; cup.receiveShadow = true;
+tag(cup, 'Fixed Solar-Panel Collector Cup', 'Rigid photovoltaic bowl (~7.5 m² effective catchment) — the same surface that generates power on dry, sunny days also funnels rain into the centre pipe when it rains. Fixed in place year-round: no inflation, no hydraulics, nothing that can fail to deploy.');
 root.add(cup);
 
-// Cup rim ring (tracks inflation radius)
-const rim = new THREE.Mesh(new THREE.TorusGeometry(CUP_MIN_R, 0.025, 10, 48), M.steel);
+// Cup rim ring (fixed radius)
+const rim = new THREE.Mesh(new THREE.TorusGeometry(CUP_R, 0.03, 10, 48), M.steel);
 rim.position.set(0, CUP_Y + 0.66, 0);
 rim.rotation.x = Math.PI / 2;
 root.add(rim);
 
-// Faint catchment-area disc showing full inflated coverage (helps read "maximum capture")
-const catchGeo = new THREE.CircleGeometry(CUP_MAX_R, 48);
-const catchMat = new THREE.MeshBasicMaterial({ color: 0xFF7A45, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false });
+// Mode indicator on the rim — blue while catching rain, amber while generating solar
+const cupModeLED = mesh(new THREE.SphereGeometry(0.04, 12, 12),
+  new THREE.MeshStandardMaterial({ color: 0xFFD37A, emissive: 0xFFD37A, emissiveIntensity: 0.9 }),
+  0, CUP_Y + 0.66, CUP_R - 0.05);
+tag(cupModeLED, 'Collector Mode Indicator', 'Blue = actively catching rain. Amber = generating solar power. The fixed cup does both from the same surface without moving.');
+root.add(cupModeLED);
+
+// Faint catchment-area disc showing the fixed coverage area
+const catchGeo = new THREE.CircleGeometry(CUP_R, 48);
+const catchMat = new THREE.MeshBasicMaterial({ color: 0xFFD37A, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false });
 const catchDisc = new THREE.Mesh(catchGeo, catchMat);
 catchDisc.rotation.x = -Math.PI / 2;
 catchDisc.position.set(0, CUP_Y + 0.665, 0);
 root.add(catchDisc);
 
-// Rain droplets — dense field, spread across the full inflated catchment area
+// Rain droplets — dense field, spread across the fixed catchment area
 const drops = [];
 const DROP_COUNT = 400;
 const dropGeo = new THREE.SphereGeometry(0.018, 5, 5);
@@ -379,7 +379,7 @@ for (let i = 0; i < DROP_COUNT; i++) {
     new THREE.MeshStandardMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.75, emissive: 0x4488BB, emissiveIntensity: 0.3 })
   );
   const angle = Math.random() * Math.PI * 2;
-  const r = Math.random() * (CUP_MAX_R + 0.6); // some miss the cup on purpose (realism) but most land inside
+  const r = Math.random() * (CUP_R + 0.6); // some miss the cup on purpose (realism) but most land inside
   d.position.set(Math.cos(angle)*r, CUP_Y + 2.0 + Math.random() * 3.5, Math.sin(angle)*r);
   d._speed = 0.05 + Math.random() * 0.05;
   d._startY = d.position.y;
@@ -563,7 +563,7 @@ tag(tower, 'Wind Turbine Mast', 'Compact vertical-axis mast mounted on the unit 
 turbineGroup.add(tower);
 
 const nacelle = mesh(box(0.16,0.09,0.12), M.steel, 0, TOWER_H, 0.06);
-tag(nacelle, 'Turbine Generator (Self-Power)', 'Small DC generator driven by the rotor. Feeds the LiFePO4 battery so the unit runs on its own power — no grid draw for sensing, hydraulics standby, or the AI controller.');
+tag(nacelle, 'Turbine Generator (Self-Power)', 'Small DC generator driven by the rotor. Feeds the LiFePO4 battery so the unit runs on its own power — no grid draw for sensing or the AI controller.');
 turbineGroup.add(nacelle);
 
 const rotorGroup = new THREE.Group();
@@ -597,7 +597,7 @@ for (let i = 0; i < 3; i++) {
   arm.add(rod); arm.add(cupS);
   anemoSpin.add(arm);
 }
-tag(anemoMast, 'Anemometer (Wind Sensor)', 'Continuously measures wind speed. If it exceeds the safe threshold, the controller keeps the whole unit locked underground — even while raining — to protect the inflatable cup and hydraulics from wind damage.');
+tag(anemoMast, 'Anemometer (Wind Sensor)', 'Continuously measures wind speed for the turbine and weather logging. The fixed collector cup has no fabric or seals to protect, so — unlike a retracting design — there is nothing to lock down in high wind.');
 
 // ── PLUMBING / PIPES ──────────────────────────────────────────────
 // Telescope → Tank
@@ -654,7 +654,7 @@ function makeLabel(text, position) {
 const labelsGroup = new THREE.Group();
 root.add(labelsGroup);
 const labelData = [
-  ['Inflatable Cup (TPU/Silicone, ∅0.5–2m)', [1.4, 2.1, 0]],
+  ['Fixed Solar-Panel Cup (∅3.1m, PV surface)', [1.4, 2.1, 0]],
   ['Underground HDPE Tank (500–5000L)', [-1.3, -1.0, -0.6]],
   ['5-Stage Purifier', [2.4, -1.2, -0.5]],
   ['AI Control Unit (IP67, 4G/WiFi)', [2.6, -0.9, -0.5]],
@@ -831,28 +831,27 @@ document.getElementById('btn-season').addEventListener('click', function() {
   this.classList.toggle('active', season === 'dry');
 });
 
-// ── WEATHER / SAFETY STATE MACHINE ────────────────────────────────
+// ── WEATHER STATE MACHINE ──────────────────────────────────────────
 // Scenario timeline (seconds) the whole system cycles through, driving
-// hydraulic deployment, wind lockout, turbine speed and the HUD.
+// rain visibility, turbine speed and the HUD. No hydraulics involved —
+// the cup is fixed, so wind never locks anything down.
 const SCENARIO = [
-  { t0: 0,  t1: 6,  rain: false, windLabel: 'CALM',      windKmh: 6,  locked: false },
-  { t0: 6,  t1: 15, rain: true,  windLabel: 'SAFE',       windKmh: 14, locked: false },
-  { t0: 15, t1: 22, rain: true,  windLabel: 'HIGH',       windKmh: 46, locked: true  },
-  { t0: 22, t1: 28, rain: false, windLabel: 'MODERATE',   windKmh: 22, locked: false },
+  { t0: 0,  t1: 6,  rain: false, windLabel: 'CALM',      windKmh: 6  },
+  { t0: 6,  t1: 15, rain: true,  windLabel: 'SAFE',       windKmh: 14 },
+  { t0: 15, t1: 22, rain: true,  windLabel: 'HIGH',       windKmh: 46 },
+  { t0: 22, t1: 28, rain: false, windLabel: 'MODERATE',   windKmh: 22 },
 ];
 const CYCLE_LEN = 28;
 function getScenario(t) {
   const ct = t % CYCLE_LEN;
   const base = SCENARIO.find(s => ct >= s.t0 && ct < s.t1) || SCENARIO[0];
-  // Dry-season mode: wind/turbine still cycles for demo variety, but it
-  // never rains, so the cup never deploys — the unit runs purely on stored
-  // water + solar/wind/battery for the other ~10 months of the year.
-  if (season === 'dry') return { ...base, rain: false, locked: false };
+  // Dry-season mode: wind still cycles for demo variety, but it never rains —
+  // the cup just keeps generating solar power for the other ~10 months.
+  if (season === 'dry') return { ...base, rain: false };
   return base;
 }
 
-let inflateFracState = 0;   // smoothed 0→1 deployment amount, persists across frames
-let batteryLevel = 62;      // %, charged by the turbine, drained by hydraulics/AI
+let batteryLevel = 62;      // %, charged by solar + turbine, drained by pumps/AI
 let tankLevel = 0.78;       // 0–1, drawn down by outlets in dry season, refilled while collecting
 let sessionAdRevenue = 0;   // ₹, simulated ad-panel rental income (accelerated demo pace)
 let sessionStreetSaving = 0;// ₹, simulated avoided municipal street-lighting cost
@@ -908,41 +907,43 @@ function animate() {
   const t = clock.getElapsedTime();
 
   const scenario = getScenario(t);
-  const shouldDeploy = scenario.rain && !scenario.locked;
 
   if (animating) {
-    // ── Inflate / deploy only when it's raining AND wind is safe ──
-    const targetFrac = shouldDeploy ? 1 : 0;
-    inflateFracState += (targetFrac - inflateFracState) * 0.02;
-    const inflateFrac = inflateFracState;
-    const currentR = CUP_MIN_R + (CUP_MAX_R - CUP_MIN_R) * inflateFrac;
+    // ── Day/night solar cycle + wind-driven turbine output — computed first
+    // so the cup's rain/solar indicator can use them below. ──
+    const dayPhase = Math.max(0, Math.sin(t * 0.025));
+    const solarW = 50 * dayPhase;
+    const turbineW = Math.min(40, Math.pow(scenario.windKmh / 46, 3) * 40);
+    const isRaining = scenario.rain;
 
-    cup.geometry.dispose();
-    cup.geometry = new THREE.LatheGeometry(cupProfile(currentR), 48);
-    const breathe = 1 + Math.sin(t * 1.4) * 0.006;
+    // ── Fixed cup: no inflation, no rise — just a mode readout on its own surface ──
+    const breathe = 1 + Math.sin(t * 1.4) * 0.004; // subtle idle shimmer, purely cosmetic
     cup.scale.set(breathe, 1, breathe);
-
-    rim.scale.set(currentR / CUP_MIN_R, currentR / CUP_MIN_R, 1);
-    catchDisc.material.opacity = 0.03 + 0.06 * inflateFrac;
-    catchDisc.material.color.set(scenario.locked ? 0xFF4444 : 0xFF7A45);
-
-    // Telescope rises together with inflation (deploy sequence)
-    const riseY = inflateFrac * 0.35;
-    stage3.position.y = 0.7 + riseY;
-    cup.position.y = CUP_Y + riseY;
-    rim.position.y = CUP_Y + 0.66 + riseY;
-    catchDisc.position.y = CUP_Y + 0.665 + riseY;
+    if (isRaining) {
+      cupMat.emissive.set(0x2266AA);
+      cupMat.emissiveIntensity = 0.45;
+      cupModeLED.material.color.set(0x66CCFF);
+      cupModeLED.material.emissive.set(0x2266AA);
+      catchMat.color.set(0x66CCFF);
+    } else {
+      cupMat.emissive.set(0x3a2a05);
+      cupMat.emissiveIntensity = 0.15 + 0.25 * dayPhase;
+      cupModeLED.material.color.set(0xFFD37A);
+      cupModeLED.material.emissive.set(0xFFD37A);
+      catchMat.color.set(0xFFD37A);
+    }
+    catchMat.opacity = 0.05;
 
     // ── Rain drops: only actually fall when the scenario says it's raining ──
     drops.forEach((d) => {
-      if (!scenario.rain) { d.visible = false; return; }
+      if (!isRaining) { d.visible = false; return; }
       d.visible = true;
       d.position.y -= d._speed;
-      const cupTopY = CUP_Y + riseY + 0.66;
-      const landedInCup = d._r <= currentR + 0.05;
+      const cupTopY = CUP_Y + 0.66;
+      const landedInCup = d._r <= CUP_R + 0.05;
       const landY = landedInCup ? cupTopY : 0.02;
       if (d.position.y <= landY) {
-        if (landedInCup && inflateFrac > 0.15) {
+        if (landedInCup) {
           const s = splashes[splashIdx % splashes.length];
           splashIdx++;
           s.position.set(d.position.x, landY + 0.005, d.position.z);
@@ -953,7 +954,7 @@ function animate() {
         }
         d.position.y = d._startY + Math.random() * 1.5;
         const angle = Math.random() * Math.PI * 2;
-        const r = Math.random() * (CUP_MAX_R + 0.6);
+        const r = Math.random() * (CUP_R + 0.6);
         d._r = r; d._angle = angle;
         d.position.x = Math.cos(angle) * r;
         d.position.z = Math.sin(angle) * r;
@@ -974,25 +975,16 @@ function animate() {
     rotorGroup.rotation.z += spinSpeed;
     anemoSpin.rotation.y += spinSpeed * 1.3;
 
-    // ── Solar + turbine electricity generation — feeds the same battery that
-    // runs the street light, ad-panel sign, sensors and (in dry season) the
-    // outlet pumps. Solar follows a day/night cycle up to its 50W rating;
-    // the turbine follows a cubic wind-power curve, capped to a realistic
-    // compact-turbine output. ──
-    const dayPhase = Math.max(0, Math.sin(t * 0.025));
-    const solarW = 50 * dayPhase;
-    const turbineW = Math.min(40, Math.pow(scenario.windKmh / 46, 3) * 40);
-
-    // Battery: charges from solar+turbine, drains a little when hydraulics run
+    // Battery: charges from solar+turbine, drains a little when outlet pumps run
     const chargeRate = (solarW + turbineW) * 0.00045;
-    const drainRate = shouldDeploy ? 0.012 : 0.003;
+    const drainRate = isRaining ? 0.008 : 0.003;
     batteryLevel = Math.max(8, Math.min(100, batteryLevel + chargeRate - drainRate));
 
-    // ── Tank level: refills while actively collecting rain; otherwise drawn
-    // down by the drinking/irrigation/household outlets. This is what keeps
-    // the unit useful through the ~10 dry months, not just the ~2-month
-    // monsoon collection window — the 20% emergency reserve stays locked. ──
-    if (shouldDeploy && inflateFrac > 0.85) {
+    // ── Tank level: refills while it's raining (fixed cup collects immediately,
+    // no deploy delay); otherwise drawn down by the drinking/irrigation/household
+    // outlets. This is what keeps the unit useful through the ~10 dry months,
+    // not just the ~2-month monsoon window — the 20% emergency reserve stays locked. ──
+    if (isRaining) {
       tankLevel = Math.min(1, tankLevel + 0.0006);
     } else {
       tankLevel = Math.max(0.2, tankLevel - 0.00018);
@@ -1022,14 +1014,12 @@ function animate() {
       hudRain.textContent = scenario.rain ? 'DETECTED' : 'NONE';
       hudRain.className = 'hud-val' + (scenario.rain ? '' : '');
       hudWind.textContent = `${scenario.windKmh} km/h · ${scenario.windLabel}`;
-      hudWind.className = 'hud-val' + (scenario.locked ? ' lock' : (scenario.windKmh > 30 ? ' warn' : ''));
+      hudWind.className = 'hud-val' + (scenario.windKmh > 30 ? ' warn' : '');
       let sysText, sysClass = 'hud-val';
-      if (scenario.locked) { sysText = 'LOCKED — HIGH WIND'; sysClass += ' lock'; }
-      else if (shouldDeploy && inflateFrac > 0.85) { sysText = 'DEPLOYED — COLLECTING'; }
-      else if (shouldDeploy) { sysText = 'EXTENDING…'; sysClass += ' warn'; }
-      else if (inflateFrac > 0.05) { sysText = 'RETRACTING…'; sysClass += ' warn'; }
-      else if (season === 'dry') { sysText = 'RETRACTED — SERVING STORED WATER'; }
-      else { sysText = 'RETRACTED — IDLE'; }
+      if (isRaining) { sysText = 'COLLECTING RAIN'; }
+      else if (solarW > 5) { sysText = 'GENERATING SOLAR (' + solarW.toFixed(0) + 'W)'; }
+      else if (season === 'dry') { sysText = 'STANDBY — SERVING STORED WATER'; }
+      else { sysText = 'STANDBY — MONITORING'; }
       hudSystem.textContent = sysText;
       hudSystem.className = sysClass;
       hudPurifier.textContent = 'CYCLING STORED WATER';
